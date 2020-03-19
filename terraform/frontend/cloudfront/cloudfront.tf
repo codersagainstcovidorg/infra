@@ -23,7 +23,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
   comment             = "Frontend CF"
   default_root_object = var.default_root_object
 
-  aliases = var.cloudfront_aliases
+  aliases = var.use_alias ? var.cloudfront_aliases : []
 
   restrictions {
     geo_restriction {
@@ -32,7 +32,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
   }
 
   default_cache_behavior {
-    allowed_methods  = ["GET", "HEAD", "POST", "PUT"]
+    allowed_methods  = ["GET", "DELETE", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods   = ["GET", "HEAD"]
     target_origin_id = local.s3_origin_id
 
@@ -52,7 +52,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
 
   # Cache behavior with precedence 0
   ordered_cache_behavior {
-    path_pattern     = "/content/immutable/*"
+    path_pattern     = "static/*"
     allowed_methods  = ["GET", "HEAD"]
     cached_methods   = ["GET", "HEAD"]
     target_origin_id = local.s3_origin_id

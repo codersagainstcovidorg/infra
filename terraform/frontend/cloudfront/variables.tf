@@ -12,6 +12,12 @@ variable "cloudfront_aliases" {
   type = list(string)
 }
 
+variable "use_alias" {
+  description = "use alias in CF"
+  type = bool
+}
+
+
 variable "price_class" {
   description = "CF Price class"
 }
