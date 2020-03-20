@@ -1,6 +1,6 @@
 resource "aws_s3_bucket" "frontend" {
   # random string since buckets are global
-  bucket = "cac-frontend-iejwef833161234"
+  bucket = var.s3_bucket_name
   acl    = "private"
 
   versioning {
