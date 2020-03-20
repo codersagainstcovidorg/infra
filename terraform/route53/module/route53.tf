@@ -1,6 +1,6 @@
 locals {
   fctcom  = "findcovidtesting.com"
-  fc19torg = "findcovidtesting.org"
+  fc19torg = "findcovid19testing.org"
 }
 
 # Hosted zones
@@ -40,6 +40,15 @@ resource "aws_route53_record" "fctcom-cloudfront" {
 #######################
 # findcovid19testing.org
 #######################
+
+# cname www to apex domain
+resource "aws_route53_record" "www-fc19torg" {
+  zone_id = aws_route53_zone.findcovid19testingorg.zone_id
+  name    = "www"
+  type    = "CNAME"
+  ttl     = "500"
+  records = ["${local.fc19torg}"]
+}
 
 # redirect to main site
 resource "aws_route53_record" "fc19torg-fctcom" {
