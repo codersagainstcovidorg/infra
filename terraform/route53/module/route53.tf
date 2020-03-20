@@ -38,7 +38,7 @@ resource "aws_route53_record" "fctcom-cloudfront" {
 }
 
 #######################
-# findcovidtesting.org
+# findcovid19testing.org
 #######################
 
 # redirect to main site
@@ -48,8 +48,8 @@ resource "aws_route53_record" "fc19torg-fctcom" {
   type    = "A"
 
   alias {
-    name                   = local.fctcom
-    zone_id                = aws_route53_zone.findcovidtestingcom.zone_id
+    name                   = aws_s3_bucket.fc19torg.website_domain
+    zone_id                = aws_s3_bucket.fc19torg.hosted_zone_id
     evaluate_target_health = false
   }
 }

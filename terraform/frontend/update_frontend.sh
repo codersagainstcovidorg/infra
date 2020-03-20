@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-this_dir=$(dirname $PWD)
+this_dir=$PWD
 
 terraform init \
   -backend-config="${this_dir}/config/backend.tfvars" \

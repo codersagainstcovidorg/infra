@@ -25,5 +25,8 @@ variable "price_class" {
 variable "s3_bucket_name" {
   description = "S3 bucket name"
 }
+variable "acm_certificate_arn" {
+  description = "ACM arn"
+}
 
 
