@@ -6,7 +6,7 @@ acm_certificate_arn = "arn:aws:acm:us-east-1:656509764755:certificate/5e07058a-2
 
 # Set to true and update list below to set an alias
 use_alias = true
-cloudfront_aliases = ["findcovidtesting.com"]
+cloudfront_aliases = ["findcovidtesting.com", "www.findcovidtesting.com"]
 
 # US and Europe edge locations
 price_class = "PriceClass_100"
