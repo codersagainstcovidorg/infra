@@ -1,18 +1,21 @@
 #!/bin/bash
 set -e
-this_dir="$PWD/$1"
+# PWD + module name + environment
+config_dir="$PWD/$1/environments/$2"
+module_dir="$PWD/$1/"
+out_plan="${module_dir}/terraform.tfplan"
 
 terraform init \
-  -backend-config="${this_dir}/config/backend.tfvars" \
+  -backend-config="${config_dir}/config/backend.tfvars" \
   -input=false \
   -reconfigure \
-  "${this_dir}/module"
+  "${module_dir}/module"
 
 terraform plan \
-  -var-file="${this_dir}/config/terraform.tfvars" \
-  -out="${this_dir}/terraform.tfplan" \
+  -var-file="${config_dir}/config/terraform.tfvars" \
+  -out="${out_plan}" \
   -input=false \
-  "${this_dir}/module"
+  "${module_dir}/module"
 
 echo
 echo "*********************************************************"
@@ -28,4 +31,4 @@ fi
 
 terraform apply \
     -input=false \
-    "${this_dir}/terraform.tfplan"
+    "${out_plan}"
