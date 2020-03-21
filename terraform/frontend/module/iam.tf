@@ -42,13 +42,13 @@ data "aws_iam_policy_document" "github" {
 }
 
 resource "aws_iam_policy" "github" {
-  name   = "github_actions"
+  name   = "${var.environment}-github_actions"
   path   = "/"
   policy = data.aws_iam_policy_document.github.json
 }
 
 resource "aws_iam_user" "github" {
-  name = "github_actions"
+  name = "${var.environment}-github_actions"
   path = "/"
   tags = {
     Terraform = "true"

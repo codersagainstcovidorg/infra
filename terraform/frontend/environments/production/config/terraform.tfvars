@@ -1,3 +1,4 @@
+environment = "production"
 region = "us-east-1"
 # Cloudfront bucket name
 s3_bucket_name = "cac-frontend-iejwef833161234"

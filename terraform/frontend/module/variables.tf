@@ -29,4 +29,10 @@ variable "acm_certificate_arn" {
   description = "ACM arn"
 }
 
+variable "environment" {
+  description = "Environment to deploy into"
+}
+
+
+
 

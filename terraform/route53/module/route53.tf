@@ -2,9 +2,11 @@
 
 # Hosted zones
 resource "aws_route53_zone" "findcovidtestingcom" {
+  count = var.environment == "production" ? 1 : 0
   name = local.fctcom
 }
 resource "aws_route53_zone" "findcovid19testingorg" {
+  count = var.environment == "production" ? 1 : 0
   name = local.fc19torg
 }
 
@@ -14,7 +16,8 @@ resource "aws_route53_zone" "findcovid19testingorg" {
 
 # cname www to apex domain
 resource "aws_route53_record" "www" {
-  zone_id = aws_route53_zone.findcovidtestingcom.zone_id
+  count = var.environment == "production" ? 1 : 0
+  zone_id = aws_route53_zone.findcovidtestingcom[0].zone_id
   name    = "www"
   type    = "CNAME"
   ttl     = "500"
@@ -23,8 +26,23 @@ resource "aws_route53_record" "www" {
 
 # main site to cloudfront
 resource "aws_route53_record" "fctcom-cloudfront" {
-  zone_id = aws_route53_zone.findcovidtestingcom.zone_id
+  count = var.environment == "production" ? 1 : 0
+  zone_id = aws_route53_zone.findcovidtestingcom[0].zone_id
   name    = local.fctcom
+  type    = "A"
+
+  alias {
+    name                   = var.cloudfront_domain
+    zone_id                = "Z2FDTNDATAQYW2" # this is static
+    evaluate_target_health = false
+  }
+}
+
+# Had to do it this way because resources were already created and changing module logic would cause downtime
+resource "aws_route53_record" "fctcom-cloudfront-staging" {
+  count = var.environment == "staging" ? 1 : 0
+  zone_id = data.aws_route53_zone.selected.zone_id
+  name    = local.fctcom_staging
   type    = "A"
 
   alias {
