@@ -5,18 +5,19 @@ This has some MVP prelim code to launch the infra resources for CAC
 This has quick code to launch frontend and backend resources. 
 
 ## Requirements
-TF > 12.22
+TF > 0.12.24
 
 ## Overview
 Environments: 
 
-* `staging` - deploys from develop and development
-* `production` - deploys from master
+* `staging` - deploys from master
+* `production` - deploys from git tag/release
 
 Components:
 
 * `frontend` - Cloudfront, S3, all resources to get the frontend running
 * `route53` - All resources to create hosted zones, dns records, etc
+* `vpc` - All resources for launching VPC components
 
 ## Usage
 Very WIP for MVP launch
