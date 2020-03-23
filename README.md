@@ -18,6 +18,7 @@ Components:
 * `frontend` - Cloudfront, S3, all resources to get the frontend running
 * `route53` - All resources to create hosted zones, dns records, etc
 * `vpc` - All resources for launching VPC components
+* `database` - RDS and related resources
 
 ## Usage
 Very WIP for MVP launch
