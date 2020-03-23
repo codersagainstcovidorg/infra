@@ -31,4 +31,12 @@ module "vpc" {
   tags = {
     Environment = var.environment
   }
+
+  public_subnet_tags = {
+    Tier = "public"
+  }
+
+  private_subnet_tags = {
+    Tier = "private"
+  }
 }
