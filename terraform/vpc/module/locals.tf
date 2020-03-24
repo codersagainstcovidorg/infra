@@ -37,6 +37,14 @@ locals {
         protocol    = "tcp"
         cidr_block  = "0.0.0.0/0"
       },
+      {
+        rule_number = 120
+        rule_action = "allow"
+        from_port   = 5432
+        to_port     = 5432
+        protocol    = "tcp"
+        cidr_block  = var.cidr_block
+      }
     ]
     public_outbound = [
       {
@@ -54,6 +62,14 @@ locals {
         to_port     = 443
         protocol    = "tcp"
         cidr_block  = "0.0.0.0/0"
+      },
+      {
+        rule_number = 120
+        rule_action = "allow"
+        from_port   = 5432
+        to_port     = 5432
+        protocol    = "tcp"
+        cidr_block  = var.cidr_block
       },
     ]
   }
