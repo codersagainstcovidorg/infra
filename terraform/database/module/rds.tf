@@ -6,7 +6,7 @@ module "label" {
 
 module "aurora" {
   source  = "terraform-aws-modules/rds-aurora/aws"
-  version = "~> 2.0"
+  version = "~> 2.16"
 
   name                  = module.label.id
   engine                = "aurora-postgresql"
@@ -15,6 +15,7 @@ module "aurora" {
   replica_scale_enabled = false
   replica_count         = 0
   kms_key_id            = aws_kms_key.database.arn
+  allowed_cidr_blocks   = ["${data.aws_vpc.current.cidr_block}"]
 
   backtrack_window = 10 # ignored in serverless
 
@@ -28,8 +29,8 @@ module "aurora" {
 
   scaling_configuration = {
     auto_pause               = true
-    min_capacity             = 2
-    max_capacity             = 384
+    min_capacity             = var.min_capacity
+    max_capacity             = var.max_capacity
     seconds_until_auto_pause = 300
     timeout_action           = "ForceApplyCapacityChange"
   }

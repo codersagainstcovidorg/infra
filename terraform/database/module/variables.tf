@@ -10,3 +10,11 @@ variable "environment" {
 variable "namespace" {
   description = "Organization name or abbreviation"
 }
+variable "max_capacity" {
+  description = "Capacity for the cluster"
+  type = number
+}
+variable "min_capacity" {
+  description = "Capacity for the cluster"
+  type = number
+}
