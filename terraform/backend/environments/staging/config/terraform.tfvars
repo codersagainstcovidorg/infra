@@ -13,12 +13,10 @@ network_mode   = "awsvpc"
 container_memory = 512
 container_cpu    = 256
 
-container_memory_reservation = ""
-
 essential                    = true
 readonly_root_filesystem     = false
 
-environment = [
+container_environment = [
   # {
   #   name  = "ENVIRONMENT"
   #   value = "I am a string"

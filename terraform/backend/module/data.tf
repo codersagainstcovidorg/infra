@@ -20,3 +20,8 @@ data "aws_subnet_ids" "private_subnets" {
   }
 }
 
+data "aws_route53_zone" "selected" {
+  name         = "findcovidtesting.com."
+  private_zone = false
+}
+

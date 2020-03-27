@@ -9,13 +9,11 @@ locals {
     image                  = "${aws_ecr_repository.backend.repository_url}:${var.image_tag}"
     essential              = var.essential
     readonlyRootFilesystem = var.readonly_root_filesystem
-    mountPoints            = var.mount_points
     portMappings           = var.port_mappings
-    logConfiguration       = var.log_configuration
     memory                 = var.container_memory
-    memoryReservation      = var.container_memory_reservation == "" ? nil : var.container_memory_reservation
     cpu                    = var.container_cpu
-    environment            = {
+    environment            = var.container_environment
+    logConfiguration       = {
       logDriver = "awslogs"
       options = {
         awslogs-group = aws_cloudwatch_log_group.backend.name
@@ -32,8 +30,8 @@ resource "aws_ecs_task_definition" "backend" {
   family                = "${var.environment}-backend"
   container_definitions = local.json_data
   requires_compatibilities = var.network_mode == "awsvpc" ? ["FARGATE"] : ["EC2"]
-  task_role_arn         = aws_iam_role.ecs_task_role.arn
-  execution_role_arn    = aws_iam_role.ecs_task_execution_role.arn
+  task_role_arn         = aws_iam_role.ecs_task.arn
+  execution_role_arn    = aws_iam_role.ecs_task_execution.arn
 }
 
 resource "aws_ecs_service" "backend" {
@@ -43,9 +41,8 @@ resource "aws_ecs_service" "backend" {
   task_definition                    = aws_ecs_task_definition.backend.arn
   launch_type                        = var.network_mode == "awsvpc" ? "FARGATE" : "EC2"
   desired_count                      = 1
-  platform_version                   = var.network_mode == "awsvpc" ? "LATEST" : nil
+  platform_version                   = var.network_mode == "awsvpc" ? "LATEST" : null
   enable_ecs_managed_tags            = false
-  propagate_tags                     = true
   health_check_grace_period_seconds  = 10
   
   network_configuration {
