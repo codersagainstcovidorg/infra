@@ -17,6 +17,10 @@ essential                    = true
 readonly_root_filesystem     = false
 
 container_environment = [
+  {
+    name  = "ENVIRONMENT"
+    value = "staging"
+  }
 ]
 
 port_mappings = [

@@ -83,21 +83,32 @@ resource "aws_iam_role" "ecs_task" {
 EOF
 }
 
-# resource "aws_iam_policy" "ecs_task" {
-#   name        = "${var.environment}-backend"
-#   path        = "/"
-#   description = "backend task policy"
+resource "aws_iam_policy" "ecs_task" {
+  name        = "${var.environment}-backend"
+  path        = "/"
+  description = "backend task policy"
 
-#   policy = <<EOF
-# {
-#   "Version": "2012-10-17",
-#   "Statement": [
-#   ]
-# }
-# EOF
-# }
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetParameter",
+        "kms:Decrypt"
+      ],
+      "Resource": [
+        "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/${var.environment}/*",
+        "${data.aws_kms_key.environment.arn}"
+      ]
+    }
+  ]
+}
+EOF
+}
 
-# resource "aws_iam_role_policy_attachment" "task-attach" {
-#   role       = aws_iam_role.ecs_task.name
-#   policy_arn = aws_iam_policy.ecs_task.arn
-# }
+resource "aws_iam_role_policy_attachment" "task-attach" {
+  role       = aws_iam_role.ecs_task.name
+  policy_arn = aws_iam_policy.ecs_task.arn
+}

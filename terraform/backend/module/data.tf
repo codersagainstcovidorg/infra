@@ -6,6 +6,10 @@ data "aws_vpc" "current" {
   }
 }
 
+data "aws_kms_key" "environment" {
+  key_id = "alias/${var.environment}"
+}
+
 data "aws_subnet_ids" "public_subnets" {
   vpc_id = data.aws_vpc.current.id
   tags = {
