@@ -20,18 +20,21 @@ locals {
         awslogs-region = var.region
         awslogs-stream-prefix = "ecs"
       }
-    } 
-  }  
+    }
+  }
 
   json_data = jsonencode(local.container_definition)
 }
 
 resource "aws_ecs_task_definition" "backend" {
   family                = "${var.environment}-backend"
-  container_definitions = local.json_data
+  container_definitions = "[${local.json_data}]"
   requires_compatibilities = var.network_mode == "awsvpc" ? ["FARGATE"] : ["EC2"]
   task_role_arn         = aws_iam_role.ecs_task.arn
   execution_role_arn    = aws_iam_role.ecs_task_execution.arn
+  network_mode          = var.network_mode
+  memory                 = var.container_memory
+  cpu                    = var.container_cpu
 }
 
 resource "aws_ecs_service" "backend" {

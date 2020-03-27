@@ -41,6 +41,7 @@ resource "aws_iam_policy" "ecs_task_execution" {
       "Action": "ecr:GetAuthorizationToken",
       "Resource": "*"
     },
+    {
       "Effect": "Allow",
       "Action": [
           "logs:CreateLogStream",

@@ -17,28 +17,11 @@ essential                    = true
 readonly_root_filesystem     = false
 
 container_environment = [
-  # {
-  #   name  = "ENVIRONMENT"
-  #   value = "I am a string"
-  # },
-  # {
-  #   name  = "true_boolean_var"
-  #   value = true
-  # },
-  # {
-  #   name  = "false_boolean_var"
-  #   value = false
-  # },
-  # {
-  #   name  = "integer_var"
-  #   value = 42
-  # }
 ]
 
 port_mappings = [
   {
     containerPort = 80
-    #hostPort      = 0 # leave unset for awsvpc
     protocol      = "tcp"
   }
 ]
