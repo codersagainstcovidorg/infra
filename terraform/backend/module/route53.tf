@@ -1,7 +1,7 @@
 
 resource "aws_route53_record" "www" {
   zone_id = data.aws_route53_zone.selected.zone_id
-  name    = "api.findcovidtesting.com"
+  name    = var.environment == "staging" ? "staging.api.findcovidtesting.com" : "api.findcovidtesting.com"
   type    = "A"
 
   alias {
