@@ -10,11 +10,13 @@ TF > 0.12.24
 ## Overview
 Environments: 
 
-* `staging` - deploys from master
-* `production` - deploys from git tag/release
+* `staging` 
+* `production`
 
 Components:
 
+* `backend` - Fargate and other ecs resources for backend api
+* `kms` - KMS resources
 * `frontend` - Cloudfront, S3, all resources to get the frontend running
 * `route53` - All resources to create hosted zones, dns records, etc
 * `vpc` - All resources for launching VPC components
