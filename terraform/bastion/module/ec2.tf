@@ -15,7 +15,10 @@ module instance_profile_role {
   role_requires_mfa       = false
 
   trusted_role_services   = ["ec2.amazonaws.com"]
-  custom_role_policy_arns = ["arn:aws:iam::aws:policy/EC2InstanceConnect"]
+  custom_role_policy_arns = [
+    "arn:aws:iam::aws:policy/EC2InstanceConnect",
+    "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  ]
 }
 
 module "bastion_security_group" {
@@ -24,10 +27,6 @@ module "bastion_security_group" {
 
   name   = module.label.id
   vpc_id = data.aws_vpc.current.id
-
-  # Allow all incoming SSH traffic
-  ingress_cidr_blocks = ["0.0.0.0/0"]
-  ingress_rules       = ["ssh-tcp"]
 
   # Allow all outgoing HTTP and HTTPS traffic, as well as communication to db
   egress_cidr_blocks = ["0.0.0.0/0"]
@@ -40,10 +39,10 @@ module "bastion" {
 
   ami                         = data.aws_ami.ubuntu.id
   name                        = module.label.id
-  associate_public_ip_address = true
+  associate_public_ip_address = false
   instance_type               = "t2.small"
   vpc_security_group_ids      = [module.bastion_security_group.this_security_group_id]
-  subnet_ids                  = data.aws_subnet_ids.public_subnets.ids
+  subnet_ids                  = data.aws_subnet_ids.private_subnets.ids
   iam_instance_profile        = module.instance_profile_role.this_iam_instance_profile_name
 
   # Install dependencies
