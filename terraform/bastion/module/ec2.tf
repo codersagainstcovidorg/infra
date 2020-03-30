@@ -23,7 +23,7 @@ module instance_profile_role {
 
 module "bastion_security_group" {
   source  = "terraform-aws-modules/security-group/aws"
-  version = "3.1.0"
+  version = "~> 3.0"
 
   name   = module.label.id
   vpc_id = data.aws_vpc.current.id
@@ -35,7 +35,7 @@ module "bastion_security_group" {
 
 module "bastion" {
   source  = "terraform-aws-modules/ec2-instance/aws"
-  version = "2.12.0"
+  version = "~> 2.0"
 
   ami                         = data.aws_ami.ubuntu.id
   name                        = module.label.id
