@@ -6,7 +6,7 @@
           "Sid": "AWSConsoleStmt-1572026561834",
           "Effect": "Allow",
           "Principal": {
-              "AWS": "arn:aws:iam::${nlb_account_id}:root"
+              "AWS": "arn:aws:iam::${alb_account_id}:root"
           },
           "Action": "s3:PutObject",
           "Resource": "${s3_arn}/AWSLogs/${account_id}/*"
