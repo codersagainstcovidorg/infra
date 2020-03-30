@@ -1,6 +1,3 @@
-data "aws_region" "current" {}
-data "aws_caller_identity" "current" {}
-
 resource "aws_s3_bucket" "log-bucket" {
   bucket_prefix = "${var.env}-${var.app}-external-alb-logs"
 }
