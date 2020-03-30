@@ -20,9 +20,9 @@ data "aws_vpc" "current" {
   }
 }
 
-data "aws_subnet_ids" "public_subnets" {
+data "aws_subnet_ids" "private_subnets" {
   vpc_id = data.aws_vpc.current.id
   tags = {
-    Tier = "public"
+    Tier = "private"
   }
 }
