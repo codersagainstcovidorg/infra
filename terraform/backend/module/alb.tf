@@ -19,10 +19,6 @@ resource "aws_s3_bucket_policy" "attach-policy-to-log-bucket" {
 
 # alb
 resource "aws_lb" "backend" {
-  depends_on = [
-    "aws_s3_bucket.log-bucket",
-    "aws_s3_bucket_policy.attach-policy-to-log-bucket"
-  ]  
   name                             = "${var.environment}-backend"
   internal                         = false
   load_balancer_type               = "application"
