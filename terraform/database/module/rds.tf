@@ -15,7 +15,7 @@ module "aurora" {
   replica_scale_enabled = false
   replica_count         = 0
   kms_key_id            = aws_kms_key.database.arn
-  allowed_cidr_blocks   = ["${data.aws_vpc.current.cidr_block}"]
+  allowed_cidr_blocks   = [data.aws_vpc.current.cidr_block]
   deletion_protection   = var.environment == "production" ? true : false
 
   backtrack_window = 10 # ignored in serverless
