@@ -40,7 +40,7 @@ module "bastion" {
   ami                         = data.aws_ami.ubuntu.id
   name                        = module.label.id
   associate_public_ip_address = false
-  instance_type               = "t2.small"
+  instance_type               = "t2.micro"
   vpc_security_group_ids      = [module.bastion_security_group.this_security_group_id]
   subnet_ids                  = data.aws_subnet_ids.private_subnets.ids
   iam_instance_profile        = module.instance_profile_role.this_iam_instance_profile_name
