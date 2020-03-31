@@ -48,7 +48,7 @@ module "bastion" {
   # Install dependencies
   user_data = <<USER_DATA
 #!/bin/bash
-sudo apt-get update
-sudo apt-get -y install ec2-instance-connect
+sudo yum update
+sudo yum -y install ec2-instance-connect
   USER_DATA
 }
