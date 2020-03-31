@@ -4,13 +4,13 @@ REGION=${2-"us-east-1"}
 
 # Get instance_id
 INSTANCE_ID=$(aws ec2 describe-instances --filter Name=tag:Name,Values="cac-${ENV}-bastion" \
-  --query 'Reservations[].Instances[].InstanceId' --region "${REGION}" \
+  "Name=instance-state-name,Values=running" --query 'Reservations[].Instances[].InstanceId' --region "${REGION}" \
   --output text \
 )
 
 # Get AZ
 AZ=$(aws ec2 describe-instances --filter Name=tag:Name,Values="cac-${ENV}-bastion" \
-  --query 'Reservations[].Instances[].Placement.AvailabilityZone' --region "${REGION}" \
+  "Name=instance-state-name,Values=running" --query 'Reservations[].Instances[].Placement.AvailabilityZone' --region "${REGION}" \
   --output text \
 )
 
