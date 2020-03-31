@@ -33,3 +33,6 @@ Ex. To deploy the frontend infra (S3, Cloudfront, etc)
 ```
 ./beatcovid19.sh frontend staging|production
 ```
+
+### Loading PostGIS extension
+Simply execute the SQL in `sql/load_postgis_extension.sql` as master user after the database has been created
