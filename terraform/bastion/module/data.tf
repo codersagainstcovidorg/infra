@@ -1,17 +1,12 @@
-data "aws_ami" "ubuntu" {
+data "aws_ami" "amazon_linux_2" {
   most_recent = true
+
+  owners = "amazon"
 
   filter {
     name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-*"]
+    values = ["amzn2-ami-hvm-*-x86_64-ebs"]
   }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-
-  owners = ["099720109477"] # Canonical
 }
 
 data "aws_vpc" "current" {

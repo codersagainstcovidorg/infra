@@ -37,7 +37,7 @@ module "bastion" {
   source  = "terraform-aws-modules/ec2-instance/aws"
   version = "~> 2.0"
 
-  ami                         = data.aws_ami.ubuntu.id
+  ami                         = data.aws_ami.amazon_linux_2.id
   name                        = module.label.id
   associate_public_ip_address = false
   instance_type               = "t2.micro"
