@@ -4,20 +4,20 @@ REGION=${2-"us-east-1"}
 
 # Get instance_id
 INSTANCE_ID=$(aws ec2 describe-instances --filter Name=tag:Name,Values="cac-${ENV}-bastion" \
-  --query 'Reservations[].Instances[].InstanceId' \
+  --query 'Reservations[].Instances[].InstanceId' --region "${REGION}" \
   --output text \
 )
 
 # Get AZ
 AZ=$(aws ec2 describe-instances --filter Name=tag:Name,Values="cac-${ENV}-bastion" \
-  --query 'Reservations[].Instances[].Placement.AvailabilityZone' \
+  --query 'Reservations[].Instances[].Placement.AvailabilityZone' --region "${REGION}" \
   --output text \
 )
 
 # Get DB url
 DB_URL=$(aws rds describe-db-cluster-endpoints --db-cluster-identifier "cac-${ENV}"\
-  --query 'DBClusterEndpoints[].Endpoint' --output text \
-  )
+  --query 'DBClusterEndpoints[].Endpoint' --region "${REGION}" --output text \
+)
 
 SSH_KEY_PATH=~/.ssh/temp_ssm_key
 SSH_USER="ec2-user"
