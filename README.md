@@ -44,3 +44,6 @@ Prerequisites:
 ```
 ./start-tunnel.sh <instance-id> <availability zone> <database url>
 ```
+
+### Loading PostGIS extension
+Simply execute the SQL in `sql/load_postgis_extension.sql` as master user after the database has been created
