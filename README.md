@@ -16,11 +16,12 @@ Environments:
 Components:
 
 * `backend` - Fargate and other ecs resources for backend api
-* `kms` - KMS resources
+* `bastion` - Bastion server per env for an ssh tunnel
+* `database` - RDS and related resources
 * `frontend` - Cloudfront, S3, all resources to get the frontend running
+* `kms` - KMS resources
 * `route53` - All resources to create hosted zones, dns records, etc
 * `vpc` - All resources for launching VPC components
-* `database` - RDS and related resources
 
 ## Usage
 Very WIP for MVP launch
@@ -32,6 +33,18 @@ It will init, run a plan, and ask for confirmation. If the plan looks good, you 
 Ex. To deploy the frontend infra (S3, Cloudfront, etc)
 ```
 ./beatcovid19.sh frontend staging|production
+```
+
+## Using the Bastion
+
+Prerequisites: 
+
+- AWS CLI 
+- [Install Session Manager Plugin for the AWS CLI](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html)
+- Correct IAM permissions for your identity - [see here for more information](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Connect-using-EC2-Instance-Connect.html)
+
+```
+./scripts/start-tunnel.sh <environment>
 ```
 
 ### Loading PostGIS extension
