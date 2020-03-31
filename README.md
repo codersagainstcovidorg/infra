@@ -40,6 +40,7 @@ Prerequisites:
 
 - AWS CLI 
 - (Optional) [Install Session Manager Plugin for the AWS CLI](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html)
+- Correct IAM permissions for your identity - [see here for more information](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Connect-using-EC2-Instance-Connect.html)
 
 ```
 ./start-tunnel.sh <instance-id> <availability zone> <database url>
