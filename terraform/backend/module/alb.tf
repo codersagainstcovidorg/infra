@@ -10,6 +10,7 @@ data "template_file" "log-bucket-policy" {
     s3_arn         = "${aws_s3_bucket.log-bucket.arn}"
     account_id     = "${data.aws_caller_identity.current.account_id}"
   }
+}
 
 resource "aws_s3_bucket_policy" "attach-policy-to-log-bucket" {
   bucket = "${aws_s3_bucket.log-bucket.id}"
