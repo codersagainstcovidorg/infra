@@ -1,3 +1,4 @@
+#!/bin/bash
 INSTANCE_ID=$1
 AZ=$2
 DB_URL=$3
