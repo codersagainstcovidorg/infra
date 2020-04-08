@@ -22,6 +22,7 @@ Components:
 * `kms` - KMS resources
 * `route53` - All resources to create hosted zones, dns records, etc
 * `vpc` - All resources for launching VPC components
+* `website` - All resources for launching website components
 
 ## Usage
 Very WIP for MVP launch

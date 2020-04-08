@@ -9,6 +9,37 @@ resource "aws_route53_zone" "findcovid19testingorg" {
   count = var.environment == "production" ? 1 : 0
   name = local.fc19torg
 }
+resource "aws_route53_zone" "codersagainstcovidorg" {
+  count = var.environment == "production" ? 1 : 0
+  name = local.codersagainstcovidorg
+}
+
+#######################
+# codersagainstcovid.org
+#######################
+
+# cname www to apex domain
+resource "aws_route53_record" "website-www" {
+  zone_id = data.aws_route53_zone.website.zone_id
+  count = var.environment == "production" ? 1 : 0
+  name    = "www"
+  type    = "CNAME"
+  ttl     = "500"
+  records = ["${local.codersagainstcovidorg}"]
+}
+
+# main site to cloudfront
+resource "aws_route53_record" "website-cloudfront" {
+  zone_id = data.aws_route53_zone.website.zone_id
+  name    = var.environment == "production" ? "${local.codersagainstcovidorg}" : "${local.codersagainstcovidorg_staging}"
+  type    = "A"
+
+  alias {
+    name                   = var.website_cloudfront_domain
+    zone_id                = "Z2FDTNDATAQYW2" # this is static
+    evaluate_target_health = false
+  }
+}
 
 #######################
 # findcovidtesting.com
