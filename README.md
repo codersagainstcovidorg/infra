@@ -17,6 +17,7 @@ Components:
 
 * `backend` - Fargate and other ecs resources for backend api
 * `bastion` - Bastion server per env for an ssh tunnel
+* `csv_processor` - A lambda pipeline to watch for files in s3 to process, convert csv into json and insert into API
 * `database` - RDS and related resources
 * `frontend` - Cloudfront, S3, all resources to get the frontend running
 * `kms` - KMS resources
