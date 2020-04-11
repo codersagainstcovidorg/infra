@@ -22,15 +22,29 @@ resource "aws_lambda_permission" "allow_bucket" {
 
 data "archive_file" "lambda" {
   type        = "zip"
-  source_file = "${path.module}/lambda/csv_processor.py"
+  source_dir = "${path.module}/lambda/"
   output_path = "${path.module}/lambda.zip"
 }
 
+# repackage if sha changes 
+resource "null_resource" "lambda" {
+  triggers = {
+    zip_sha = data.archive_file.lambda.output_base64sha256
+  }
+
+  provisioner "local-exec" {
+    # Bootstrap script called with private_ip of each node in the clutser
+    command = "pip3 install -r ${path.module}/lambda/requirements.txt -t ${path.module}/lambda/"
+  }
+}
+
 resource "aws_lambda_function" "func" {
+  depends_on = [null_resource.lambda]
   filename      = "${path.module}/lambda.zip"
   function_name = "${var.environment}-csv-processor"
   role          = aws_iam_role.lambda.arn
-  handler       = "lambda_handler"
+  handler       = "csv_processor.lambda_handler"
   source_code_hash = data.archive_file.lambda.output_base64sha256
   runtime       = "python3.8"
+  timeout       = 60
 }

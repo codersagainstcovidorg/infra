@@ -1,3 +1,4 @@
 **.terraform
 **terraform.tfplan
 **.vscode
+terraform/csv_processor/module/lambda.zip
