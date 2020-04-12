@@ -102,7 +102,19 @@ resource "aws_iam_policy" "ecs_task" {
         "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/${var.environment}/*",
         "${data.aws_kms_key.environment.arn}"
       ]
-    }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:HeadObject",
+        "s3:PutObject",
+      ],
+      "Resource": [
+        "${data.aws_s3_bucket.processing.arn}",
+        "${data.aws_s3_bucket.processing.arn}/*"
+        ]
+    },
   ]
 }
 EOF

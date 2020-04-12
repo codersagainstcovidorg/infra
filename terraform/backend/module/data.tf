@@ -29,3 +29,6 @@ data "aws_route53_zone" "selected" {
   private_zone = false
 }
 
+data "aws_s3_bucket" "processing" {
+  bucket = var.processing_bucket_name
+}
