@@ -108,13 +108,13 @@ resource "aws_iam_policy" "ecs_task" {
       "Action": [
         "s3:GetObject",
         "s3:HeadObject",
-        "s3:PutObject",
+        "s3:PutObject"
       ],
       "Resource": [
         "${data.aws_s3_bucket.processing.arn}",
         "${data.aws_s3_bucket.processing.arn}/*"
-        ]
-    },
+      ]
+    }
   ]
 }
 EOF
