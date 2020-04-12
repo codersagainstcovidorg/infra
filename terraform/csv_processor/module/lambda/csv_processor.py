@@ -4,10 +4,11 @@ import boto3
 import requests
 from os import getenv
 
-# s3 client
+# utils
 s3 = boto3.client('s3', region_name=getenv("AWS_REGION", 'us-east-1'))
 ssm_client = boto3.client('ssm', region_name=getenv("AWS_REGION", 'us-east-1'))
-db_url = "https://api.findcovidtesting.com" if "production" in getenv("ENVIRONMENT") else "https://api.staging.findcovidtesting.com"
+db_endpoint = "https://api.findcovidtesting.com" if "production" in getenv("ENVIRONMENT") else "https://api.staging.findcovidtesting.com"
+db_url = f'{db_endpoint}/api/v1/location'
 
 def get_param(param_name, app_name="backend", decrypt=True):
   try:
@@ -50,9 +51,7 @@ def lambda_handler(event, context):
       # write the data as json
       json_out = json.dumps( json_blob_list )
       json_file.write(json_out)
-    with open(temp_json_file, 'r') as json_file:
-      print(json_file.readlines())
-    
+
   # upload the processed file for archival, later validation if needed - processed/$csvfile.csv.json
   s3.upload_file(temp_json_file, bucket_name, f'{csv_file_name.replace("unprocessed", "processed")}.json')
   # archive the csv, basically rename the file
@@ -69,9 +68,11 @@ def lambda_handler(event, context):
   )
 
   # upload the json to db
-  requests.post(db_url, auth=(BASIC_AUTH_USERNAME, BASIC_AUTH_PASSWORD), data=open(temp_json_file, 'rb'))
+  headers = {'Content-Type':'application/json'}
+  r = requests.post(db_url, auth=(BASIC_AUTH_USERNAME, BASIC_AUTH_PASSWORD), data=open(temp_json_file, 'rb'), headers=headers)
 
-if __name__ == "__main__":
+if getenv("AWS_EXECUTION_ENV") is None:
+  print("running locally")
   # send a mock s3 createobject event locally
   lambda_handler(context=None, event={
   "Records": [
