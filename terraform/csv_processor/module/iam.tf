@@ -40,9 +40,25 @@ resource "aws_iam_policy" "lambda" {
       "Effect": "Allow",
       "Action": [
         "s3:GetObject",
-        "s3:HeadObject"
+        "s3:HeadObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
       ],
-      "Resource": "${aws_s3_bucket.processing.arn}"
+      "Resource": [
+        "${aws_s3_bucket.processing.arn}",
+        "${aws_s3_bucket.processing.arn}/*"
+        ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetParameter",
+        "kms:Decrypt"
+      ],
+      "Resource": [
+        "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter/${var.environment}/*",
+        "${data.aws_kms_key.environment.arn}"
+      ]
     }
   ]
 }

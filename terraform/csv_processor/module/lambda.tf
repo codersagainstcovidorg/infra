@@ -26,14 +26,14 @@ data "archive_file" "lambda" {
   output_path = "${path.module}/lambda.zip"
 }
 
-# repackage if sha changes 
+# reinstall if sha changes 
 resource "null_resource" "lambda" {
   triggers = {
-    zip_sha = data.archive_file.lambda.output_base64sha256
+    zip_sha = filebase64sha256("${path.module}/lambda/csv_processor.py")
   }
 
   provisioner "local-exec" {
-    # Bootstrap script called with private_ip of each node in the clutser
+    # install deps into directory to get zipped
     command = "pip3 install -r ${path.module}/lambda/requirements.txt -t ${path.module}/lambda/"
   }
 }
@@ -44,7 +44,13 @@ resource "aws_lambda_function" "func" {
   function_name = "${var.environment}-csv-processor"
   role          = aws_iam_role.lambda.arn
   handler       = "csv_processor.lambda_handler"
-  source_code_hash = data.archive_file.lambda.output_base64sha256
+  source_code_hash = filebase64sha256("${path.module}/lambda/csv_processor.py")
   runtime       = "python3.8"
   timeout       = 60
+
+  environment {
+    variables = {
+      ENVIRONMENT = var.environment
+    }
+  }
 }
