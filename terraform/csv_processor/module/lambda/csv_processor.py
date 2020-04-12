@@ -68,8 +68,8 @@ def lambda_handler(event, context):
     Key=f"{csv_file_name}"
   )
 
-  # # upload the json to db
-  # requests.post(db_url, auth=(BASIC_AUTH_USERNAME, BASIC_AUTH_PASSWORD), data=open(temp_json_file, 'rb'))
+  # upload the json to db
+  requests.post(db_url, auth=(BASIC_AUTH_USERNAME, BASIC_AUTH_PASSWORD), data=open(temp_json_file, 'rb'))
 
 if __name__ == "__main__":
   # send a mock s3 createobject event locally
