@@ -1,0 +1,4 @@
+lambda/*
+!lamba/csv_processor.py
+!lambda/requirements.txt
+lambda.zip

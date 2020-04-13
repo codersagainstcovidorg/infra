@@ -62,6 +62,11 @@ variable "certificate_arn" {
   description = "ARN of ACM cert"
 }
 
+variable "processing_bucket_name" {
+  description = "name of processing bucket"
+}
+
+
 
 
 

@@ -23,7 +23,7 @@ echo "Are you sure you want to apply the above plan? type (y/n)"
 echo "*********************************************************"
 
 # Read input, timeout after 240s
-read -r -t 240
+read -r -t 300
 if [ "$REPLY" != "y" ]; then
   echo "quitting"
   exit 0
