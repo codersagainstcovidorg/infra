@@ -50,6 +50,30 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     max_ttl                = 86400
   }
 
+  custom_error_response {
+    error_caching_min_ttl = 300
+    error_code = 404
+    response_code = 200
+    response_page_path = "/index.html"
+  }
+
+  restrictions {
+    geo_restriction {
+      locations = [
+        "BR",
+        "CN",
+        "CO",
+        "DE",
+        "IN",
+        "KR",
+        "LT",
+        "RU",
+        "VE",
+      ]
+      restriction_type = "blacklist"
+    }
+  }
+
   # Cache behavior with precedence 0
   ordered_cache_behavior {
     path_pattern     = "static/*"

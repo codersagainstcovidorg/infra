@@ -27,8 +27,26 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
 
   restrictions {
     geo_restriction {
-      restriction_type = "none"
+      locations = [
+        "BR",
+        "CN",
+        "CO",
+        "DE",
+        "IN",
+        "KR",
+        "LT",
+        "RU",
+        "VE",
+      ]
+      restriction_type = "blacklist"
     }
+  }
+
+  custom_error_response {
+    error_caching_min_ttl = 300
+    error_code = 404
+    response_code = 200
+    response_page_path = "/index.html"
   }
 
   default_cache_behavior {
