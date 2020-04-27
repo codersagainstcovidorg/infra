@@ -25,12 +25,6 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
 
   aliases = var.use_alias ? var.cloudfront_aliases : []
 
-  restrictions {
-    geo_restriction {
-      restriction_type = "none"
-    }
-  }
-
   default_cache_behavior {
     allowed_methods  = ["GET", "DELETE", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods   = ["GET", "HEAD"]
