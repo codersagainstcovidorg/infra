@@ -37,6 +37,8 @@ CREATE TEMP TABLE IF NOT EXISTS ingest_giscorps (
     "state" text,
     "lat" double precision,
     "long" double precision,
+    "instructions" text,
+    "comments" text,
     "raw_data" jsonb
 );
 
@@ -51,7 +53,6 @@ WITH source AS (
    ,"data" AS "raw_data"
   FROM 
     data_ingest
-  LIMIT 150
 )
 INSERT INTO ingest_giscorps (
   "OBJECTID",
@@ -91,6 +92,8 @@ INSERT INTO ingest_giscorps (
   "state",
   "lat",
   "long",
+  "instructions",
+  "comments",
   "raw_data"
 )
 SELECT 
@@ -163,9 +166,9 @@ SELECT
   
   COALESCE(TRIM("attr"#>>'{data_source}'), '') AS "data_source",
   
-  to_timestamp(("attr"#>>'{EditDate}')::double precision / 1000) AS "EditDate",
+  COALESCE(to_timestamp(("attr"#>>'{EditDate}')::double precision / 1000), CURRENT_TIMESTAMP) AS "EditDate",
   
-  to_timestamp(("attr"#>>'{CreationDate}')::double precision / 1000) AS "CreationDate",
+  COALESCE(to_timestamp(("attr"#>>'{CreationDate}')::double precision / 1000), CURRENT_TIMESTAMP) AS "CreationDate",
   
   TRIM("attr"#>>'{testcapacity}')::integer AS "testcapacity",
   
@@ -181,12 +184,56 @@ SELECT
   
   COALESCE(("geometry" #>> '{Longitude}'),("geometry" #>> '{x}'))::double precision AS "long",
   
+  TRIM("attr"#>>'{Instructions}') AS "instructions",
+  
+  TRIM("attr"#>>'{comments}')AS "comments",
+  
   "raw_data"
 FROM
   source
 ;
 
 ---- Transform and load into entities_proc -------------------------------------
+UPDATE ingest_giscorps SET 
+  "instructions" = CONCAT(
+    'Last update: ', "EditDate"::DATE, '\n'
+    ,CASE WHEN "is_call_first" THEN 'CALL AHEAD \n'  ELSE NULL END
+    ,CASE WHEN NULLIF(TRIM("managing_organization"), '') IS NOT NULL THEN CONCAT('The day-to-day operations at this location are overseen by ', TRIM("managing_organization"), '. ') ELSE NULL END 
+    ,CASE WHEN (("hours_of_operation" NOT LIKE ('%all %')) AND NULLIF(TRIM("hours_of_operation"), '') IS NOT NULL) THEN CONCAT('Hours of operation are ', TRIM("hours_of_operation"),' but are subject to change without notice. ') ELSE NULL END 
+    ,CASE 
+      WHEN "is_appt_only" THEN 'Appointments are required at this location. ' 
+    ELSE NULL END
+    ,CASE 
+      WHEN (TRIM("services_offered_onsite") = 'both') THEN 'The staff onsite are able to conduct screening assessments and collect samples for testing. ' 
+      WHEN NULLIF(TRIM("services_offered_onsite"), '') IS NOT NULL THEN CONCAT('Onsite staff is able to offer ', TRIM("services_offered_onsite"), '. ')
+    ELSE NULL END
+    
+    ,CASE WHEN "is_referral_required" THEN 'Testing is only performed for individuals who meet testing criteria. ' ELSE NULL END
+    
+    ,CASE 
+      WHEN "test_kind" IN ('molecular') THEN 'This location offers molecular-based testing options, which are authorized by the FDA to diagnose or to rule out COVID-19. To our knowledge, antibody testing is not offered at this location.'
+      WHEN "test_kind" IN ('both') THEN 'Although multiple testing options are offered at this location, please note that antibody tests are NOT authorized by the FDA to rule out COVID-19. This location also offers molecular-based options, which ARE authorized by the FDA for this purpose. '
+      WHEN "test_kind" IN ('antibody','antibody-poc') THEN 'WARNING: This location DOES NOT appear to offer FDA-authorized tests for persons looking to definitely rule out COVID-19 infection. As of April 20, NO ANTIBODY TEST IS AUTHORIZED by the FDA to rule out COVID-19, a separate molecular-based test must be performed. '
+      WHEN "test_kind" IN ('not specified', 'needs more research') THEN 'There is insufficient information to determine which testing options are offered at this location. '
+    ELSE NULL END
+
+    ,CASE WHEN (TRIM("status") IN ('Scheduled to Close', 'status')) THEN 
+        CONCAT('ATTENTION: This location was ', LOWER(TRIM("status")),' as of our last check-in. If you believe this is no longer the case please let us know by submitting an error report. ')
+      WHEN (TRIM("status") IN ('Closed','Temporarily Closed')) THEN 
+        CONCAT('ATTENTION: This location is ', LOWER(TRIM("status")),' as of our last check-in. If you believe this is no longer the case please let us know by submitting an error report. ')
+      WHEN (TRIM("status") IN ('Scheduled to Open')) THEN 
+        CONCAT('ATTENTION: As of our last check-in, this location was closed, but ', LOWER(TRIM("status")),'. If you believe this is no longer the case please let us know by submitting an error report. ')
+      WHEN (TRIM("status") IN ('Testing Restricted')) THEN 
+        'ATTENTION: To our knowledge, this location only serves healthcare professionals, first responders, and others who are at the highest-risk of exposure to COVID-19. '
+      ELSE 
+        'This location was operating normally as of our last check-in. '
+    END
+    ,CASE WHEN NULLIF(TRIM("managing_organization_url"), '') IS NOT NULL THEN CONCAT('(Updated: ', "EditDate"::DATE,' | Source: ', TRIM("managing_organization_url"),')') ELSE CONCAT('(Updated: ', "EditDate"::DATE,')') END
+  ),
+  "comments" = 'As details are changing frequently, please verify this information by contacting the testing center. If you are experiencing extreme or dangerous symptoms (including trouble breathing), seek medical attention immediately.'
+  
+;
+        
 TRUNCATE TABLE "entities_proc" RESTART IDENTITY; -- First, remove all existing values
 WITH upd AS (
   SELECT
@@ -296,8 +343,8 @@ WITH upd AS (
       
       ,(NOT("is_collecting_onsite" OR "is_screening_onsite" OR "is_virtual_screening_offered") AND ("test_processing" IN ('point-of-care','onsite lab','lab'))) AS "is_processing_samples_for_others"
       
-      ,'' AS "location_specific_testing_criteria"
-      ,'' AS "additional_information_for_patients"
+      ,"comments" AS "location_specific_testing_criteria"
+      ,"instructions" AS "additional_information_for_patients"
       ,'' AS "reference_publisher_of_criteria"
       ,CONCAT('[GISCorps] ', TRIM("data_source")) AS "data_source"
       ,"raw_data" AS "raw_data"
@@ -404,7 +451,7 @@ INSERT INTO "entities_proc" AS entities (
   ,"location_status"
 )
 SELECT DISTINCT
-"location_id"
+  "location_id"
   ,"is_hidden"
   ,"is_verified"
   ,"location_name"
@@ -443,7 +490,8 @@ SELECT DISTINCT
   ,"updated_on"
   ,"deleted_on"
   ,"location_status"
-FROM upd
+FROM 
+  upd
 GROUP BY
   "location_id"
   ,"is_hidden"
@@ -530,19 +578,20 @@ ON CONFLICT ("location_latitude","location_longitude") DO NOTHING
 --     ,"location_status" = EXCLUDED."location_status"
 --     ,"external_location_id" = EXCLUDED."external_location_id"
 ;
---- Testing --
-SELECT
+
+---- Insert into `entities`
+TRUNCATE TABLE "entities" RESTART IDENTITY; -- First, remove all existing values
+INSERT INTO "entities"
+SELECT 
   *
-FROM
-  entities_proc
-LIMIT 100
-
-
----- Indices -------------------------------------------------------
---CREATE UNIQUE INDEX giscorps_pkey ON giscorps("OBJECTID" text_ops);
---
----- Cleanup -------------------------------------------------------
---DROP INDEX giscorps;
---DROP TABLE giscorps;
-
+FROM 
+  "entities_proc"
+ON CONFLICT ("location_latitude","location_longitude") DO NOTHING
 ;
+
+UPDATE "entities"
+SET "updated_on" = CURRENT_TIMESTAMP;
+
+---- Clean up 
+DROP TABLE IF EXISTS ingest_giscorps;
+-- DROP TABLE IF EXISTS entities_proc;
