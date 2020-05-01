@@ -26,7 +26,7 @@ SELECT
   *
 FROM 
   "entities_staging"
-ON CONFLICT ("location_latitude","location_longitude") DO NOTHING
+ON CONFLICT ("location_id") DO NOTHING
 ;
 
 -- MAKE ALL NULL VALUES EMPTY STRINGS
