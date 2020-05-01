@@ -11,7 +11,9 @@ app_name = "external"
 """
 Expected params in SSM
 CONNECTION_STRING - psycopg connection string
+"host='localhost' dbname='my_database' user='postgres' password='secret'"
 """
+
 
 # Utils
 s3 = boto3.client('s3', region_name=getenv("AWS_REGION", 'us-east-1'))
@@ -69,44 +71,23 @@ def lambda_handler(event, context):
 
   # create index
   db_client.execute("CREATE UNIQUE INDEX data_ingest_pkey ON data_ingest(record_id int4_ops);")
-  
 
-
-
-
-
-
-  
-  json_blob_list = []
-  # Download csv
-  with open(temp_csv_file, 'wb') as file:
+  # Download json
+  with open(temp_json_file, 'r') as file:
     s3.download_fileobj(bucket_name, s3_file_name, file)
+    json_file = json.loads(file)
+    for item in json_file.get("features"):
+      logger.debug(item)
+      cur.execute('INSERT INTO %s (data, data_source) VALUES (%s, %s)', ("data_ingest", item, f's3://{bucket_name}/{s3_file_name}'))
 
-  # convert csv to json
-  with open(temp_csv_file, 'r') as csv_file:
-    with open(temp_json_file, 'w') as json_file:
-      # read the csv and store it as a dict
-      reader = csv.DictReader(csv_file)
-      for row in reader:
-        # remove these fields just in case they exist
-        row.pop('location_id')
-        row.pop('record_id')
-        row.pop('created_on')
-        row.pop('updated_on')
-        row.pop('deleted_on')
-        json_blob_list.append(row)
-      # write the data as json
-      json_out = json.dumps( json_blob_list )
-      json_file.write(json_out)
-
-  # upload the processed file for archival, later validation if needed - processed/$csvfile.csv.json
-  s3.upload_file(temp_json_file, bucket_name, f'{s3_file_name.replace("unprocessed", "processed")}.json')
-  # archive the csv, basically rename the file
+  logger.debug("Done inserting into db")
+  logger.debug("archiving file")
+  # archive the file
   s3.copy_object(
     ACL='private',
     Bucket=bucket_name,
     CopySource=f"{bucket_name}/{s3_file_name}",
-    Key=f"{s3_file_name.replace('unprocessed', 'processed')}",
+    Key=f'processed/{s3_file_name}',
     ServerSideEncryption="AES256"
   )
   s3.delete_object(
@@ -114,8 +95,10 @@ def lambda_handler(event, context):
     Key=f"{s3_file_name}"
   )
 
-
+  # close connection
   db_conn.close()
+
+  logger.debug("finished")
 
 if getenv("AWS_EXECUTION_ENV") is None:
   print("running locally")
