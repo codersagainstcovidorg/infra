@@ -592,4 +592,4 @@ SET "updated_on" = CURRENT_TIMESTAMP;
 
 ---- Clean up 
 DROP TABLE IF EXISTS ingest_giscorps;
--- DROP TABLE IF EXISTS entities_proc;
+DROP TABLE IF EXISTS entities_proc;
