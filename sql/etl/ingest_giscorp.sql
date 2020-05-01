@@ -196,9 +196,7 @@ FROM
 ---- Transform and load into entities_proc -------------------------------------
 UPDATE ingest_giscorps SET 
   "instructions" = CONCAT(
-    'Last update: ', "EditDate"::DATE, '\n'
-    ,CASE WHEN "is_call_first" THEN 'CALL AHEAD \n'  ELSE NULL END
-    ,CASE WHEN NULLIF(TRIM("managing_organization"), '') IS NOT NULL THEN CONCAT('The day-to-day operations at this location are overseen by ', TRIM("managing_organization"), '. ') ELSE NULL END 
+    CASE WHEN NULLIF(TRIM("managing_organization"), '') IS NOT NULL THEN CONCAT('The day-to-day operations at this location are overseen by ', TRIM("managing_organization"), '. ') ELSE NULL END 
     ,CASE WHEN (("hours_of_operation" NOT LIKE ('%all %')) AND NULLIF(TRIM("hours_of_operation"), '') IS NOT NULL) THEN CONCAT('Hours of operation are ', TRIM("hours_of_operation"),' but are subject to change without notice. ') ELSE NULL END 
     ,CASE 
       WHEN "is_appt_only" THEN 'Appointments are required at this location. ' 
@@ -228,7 +226,7 @@ UPDATE ingest_giscorps SET
       ELSE 
         'This location was operating normally as of our last check-in. '
     END
-    ,CASE WHEN NULLIF(TRIM("managing_organization_url"), '') IS NOT NULL THEN CONCAT('(Updated: ', "EditDate"::DATE,' | Source: ', TRIM("managing_organization_url"),')') ELSE CONCAT('(Updated: ', "EditDate"::DATE,')') END
+    ,CONCAT('(Last verified: ', "EditDate"::DATE,')')
   ),
   "comments" = 'As details are changing frequently, please verify this information by contacting the testing center. If you are experiencing extreme or dangerous symptoms (including trouble breathing), seek medical attention immediately.'
   
@@ -303,8 +301,8 @@ WITH upd AS (
       
       ,"name" AS "location_name"
       ,"address" AS "location_address_street"
-      ,"county" AS "location_address_locality"
-      ,"state" AS "location_address_region"
+      ,COALESCE("county", "state", '') AS "location_address_locality"
+      ,COALESCE("state", '') AS "location_address_region"
       ,'' AS "location_address_postal_code"
       ,"lat" AS "location_latitude"
       ,"long" AS "location_longitude"
@@ -345,7 +343,7 @@ WITH upd AS (
       
       ,"comments" AS "location_specific_testing_criteria"
       ,"instructions" AS "additional_information_for_patients"
-      ,'' AS "reference_publisher_of_criteria"
+      ,"health_dept_url" AS "reference_publisher_of_criteria"
       ,CONCAT('[GISCorps] ', TRIM("data_source")) AS "data_source"
       ,"raw_data" AS "raw_data"
       ,NULL::jsonb AS "geojson"
