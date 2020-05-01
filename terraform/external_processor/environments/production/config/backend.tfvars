@@ -1,5 +1,5 @@
 bucket = "cac-terraform-state-19384"
 dynamodb_table = "aws-terraform-state-lock"
-key = "us-east-1/production/csv_processor.tfstate"
+key = "us-east-1/production/external_processor.tfstate"
 region = "us-east-1"
 encrypt = "true"
