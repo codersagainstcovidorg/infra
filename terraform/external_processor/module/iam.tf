@@ -1,5 +1,5 @@
 resource "aws_iam_role" "lambda" {
-  name = "${var.environment}-lambda-processor"
+  name = "${var.environment}-lambda-external-processor"
 
   assume_role_policy = <<EOF
 {
@@ -18,7 +18,7 @@ EOF
 }
 
 resource "aws_iam_policy" "lambda" {
-  name        = "${var.environment}-lambda-processor"
+  name        = "${var.environment}-lambda-external-processor"
   description = "Lambda priv"
 
   policy = <<EOF
