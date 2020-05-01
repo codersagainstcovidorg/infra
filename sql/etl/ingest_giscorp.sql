@@ -1,5 +1,5 @@
--- FINAL VERSION
-CREATE TEMP TABLE IF NOT EXISTS giscorps (
+---- Create temporary table to hold ingested data while we work -------------------------------
+CREATE TEMP TABLE IF NOT EXISTS ingest_giscorps (
     "OBJECTID" text PRIMARY KEY,
     "location_id" text,
     -- "facilityid" text,
@@ -22,6 +22,8 @@ CREATE TEMP TABLE IF NOT EXISTS giscorps (
     "is_appt_only" boolean,
     "is_call_first" boolean,
     "is_referral_required" boolean,
+    "is_screening_onsite" boolean,
+    "is_collecting_onsite" boolean,
     "is_virtual_screening_offered" boolean,
     "is_virtual_screening_required" boolean,
     "is_drive_through" boolean,
@@ -32,12 +34,15 @@ CREATE TEMP TABLE IF NOT EXISTS giscorps (
     "numvehicles" numeric,
     "municipality" text,
     "county" text,
-    "State" text,
+    "state" text,
     "lat" double precision,
     "long" double precision,
     "raw_data" jsonb
 );
-TRUNCATE TABLE "giscorps" RESTART IDENTITY;
+
+TRUNCATE TABLE "ingest_giscorps" RESTART IDENTITY; -- Truncate existing table (if already existed)
+
+---- Extract and translate ----------------------------------------------
 WITH source AS (
   SELECT
    "data"#>>'{attributes,OBJECTID}' AS "OBJECTID"
@@ -46,45 +51,47 @@ WITH source AS (
    ,"data" AS "raw_data"
   FROM 
     data_ingest
-  LIMIT 10
+  LIMIT 150
 )
-INSERT INTO giscorps (
+INSERT INTO ingest_giscorps (
   "OBJECTID",
-    -- "facilityid",
-    -- "GlobalID",
-    "location_id",
-    "name",
-    "address",
-    "phone",
-    "period_start",
-    "period_end",
-    "hours_of_operation",
-    "managing_organization",
-    "managing_organization_kind",
-    "managing_organization_url",
-    "health_dept_url",  
-    "status",
-    "services_offered_onsite",
-    "test_kind",
-    "test_processing",
-    "is_flagged",
-    "is_appt_only",
-    "is_call_first",
-    "is_referral_required",
-    "is_virtual_screening_offered",
-    "is_virtual_screening_required",
-    "is_drive_through",
-    "data_source",
-    "EditDate",
-    "CreationDate",
-    "testcapacity",
-    "numvehicles",
-    "municipality",
-    "county",
-    "State",
-    "lat",
-    "long",
-    "raw_data"
+  -- "facilityid",
+  -- "GlobalID",
+  "location_id",
+  "name",
+  "address",
+  "phone",
+  "period_start",
+  "period_end",
+  "hours_of_operation",
+  "managing_organization",
+  "managing_organization_kind",
+  "managing_organization_url",
+  "health_dept_url",  
+  "status",
+  "services_offered_onsite",
+  "test_kind",
+  "test_processing",
+  "is_flagged",
+  "is_appt_only",
+  "is_call_first",
+  "is_referral_required",
+  "is_screening_onsite",
+  "is_collecting_onsite",
+  "is_virtual_screening_offered",
+  "is_virtual_screening_required",
+  "is_drive_through",
+  "data_source",
+  "EditDate",
+  "CreationDate",
+  "testcapacity",
+  "numvehicles",
+  "municipality",
+  "county",
+  "state",
+  "lat",
+  "long",
+  "raw_data"
 )
 SELECT 
   "OBJECTID",
@@ -133,6 +140,16 @@ SELECT
   END AS "is_referral_required",
   
   CASE 
+    WHEN (NULLIF(TRIM("attr"#>>'{services_offered_onsite}'), '') IS NOT NULL) THEN TRIM("attr"#>>'{services_offered_onsite}') LIKE ('%creen%')
+    ELSE FALSE -- Default value
+  END AS "is_screening_onsite",
+  
+  CASE 
+    WHEN (NULLIF(TRIM("attr"#>>'{services_offered_onsite}'), '') IS NOT NULL) THEN LOWER(TRIM("attr"#>>'{services_offered_onsite}')) LIKE ('%test%')
+    ELSE FALSE -- Default value
+  END AS "is_collecting_onsite",
+  
+  CASE 
     WHEN (NULLIF(TRIM("attr"#>>'{virtual_screening}'), '') IS NOT NULL) THEN TRIM("attr"#>>'{virtual_screening}') IN ('Available','Required')
     ELSE TRUE -- Default value
   END AS "is_virtual_screening_offered",
@@ -169,8 +186,8 @@ FROM
   source
 ;
 
----- Insert into entities_proc -------------------------------------
-upd_1 AS (
+---- Transform and load into entities_proc -------------------------------------
+WITH upd AS (
   SELECT
     "location_id"
     ,"is_hidden"
@@ -215,192 +232,133 @@ upd_1 AS (
     ,"location_status"
     ,"external_location_id"
   FROM (
-    SELECT DISTINCT
-      md5(CONCAT("y","x"))::uuid AS "location_id",
+    SELECT
+      "location_id",
+      
       CASE
         WHEN (
-          ("x" = '') OR ("y" = '')
-          OR ("Status" IN ('Not Publicly Shared', 'Invalid', '', 'Missing Data', ''))
-          OR ("Status" IS NULL)
+          ("lat" IS NULL) OR ("long" IS NULL)
+          OR ("status" IN ('Not Publicly Shared', 'Invalid', '', 'Missing Data', ''))
+          OR ("status" IS NULL)
         ) THEN TRUE
         ELSE FALSE
       END AS "is_hidden"
+      
       ,CASE
         WHEN (
-          ("x" = '') OR ("y" = '')
-          OR ("Status" IN ('Pending Review', 'Invalid', '', 'Missing Data', ''))
-          OR ("Status" IS NULL)
+          ("lat" IS NULL) OR ("long" IS NULL)
+          OR ("status" IN ('Pending Review', 'Invalid', '', 'Missing Data', ''))
+          OR ("status" IS NULL)
         ) THEN FALSE
         ELSE TRUE
       END AS "is_verified"
-      ,"Name of Facility" AS "location_name"
-      ,"Full Address" AS "location_address_street"
-      ,'' AS "location_address_locality"
-      ,'' AS "location_address_region"
+      
+      ,"name" AS "location_name"
+      ,"address" AS "location_address_street"
+      ,"county" AS "location_address_locality"
+      ,"state" AS "location_address_region"
       ,'' AS "location_address_postal_code"
-      ,"y"::double precision AS "location_latitude"
-      ,"x"::double precision AS "location_longitude"
-      ,"Phone" AS "location_contact_phone_main"
-      ,'' AS "location_contact_phone_appointments"
-      ,'' AS "location_contact_phone_covid"
-      ,"Website" AS "location_contact_url_main"
-      ,'' AS "location_contact_url_covid_info"
+      ,"lat" AS "location_latitude"
+      ,"long" AS "location_longitude"
+      ,"phone" AS "location_contact_phone_main"
+      ,"phone" AS "location_contact_phone_appointments"
+      ,"phone" AS "location_contact_phone_covid"
+      ,"managing_organization_url" AS "location_contact_url_main"
+      ,"managing_organization_url" AS "location_contact_url_covid_info"
+      ,'' AS "location_contact_url_covid_screening_tool"
+      
       ,CASE 
-        WHEN ("Virtual/Telehealth Screening" IN ('Available', 'Required')) THEN TRIM("Website") 
-      END AS "location_contact_url_covid_screening_tool"
-      ,'' AS "location_contact_url_covid_virtual_visit"
+        WHEN ("is_virtual_screening_offered" OR "is_virtual_screening_required") THEN TRIM("managing_organization_url") 
+      END AS "location_contact_url_covid_virtual_visit"
+      
       ,'' AS "location_contact_url_covid_appointments"
-      ,"Owner Type" AS "location_place_of_service_type"
-      ,"Operational Hours" AS "location_hours_of_operation"
-      ,TRIM("Services Offered") IN ('screening and testing', 'screening only') AS "is_evaluating_symptoms"
-      ,CASE
-        WHEN (
-          (TRIM("Services Offered") IN ('screening and testing', 'screening only') AND ((TRIM("Call first") = 'Yes') OR ((TRIM("Referral Required") = 'Yes'))))
-          AND (TRIM("Appointment Only") = 'Yes')
-          ) THEN TRUE
-        ELSE FALSE
-      END AS "is_evaluating_symptoms_by_appointment_only"
-      ,NULL::boolean AS "is_ordering_tests"
-      ,TRIM("Referral Required") = 'Yes' AS "is_ordering_tests_only_for_those_who_meeting_criteria"
-      ,TRIM("Services Offered") IN ('screening and testing', 'testing only') AS "is_collecting_samples"
-      ,TRIM("Services Offered") IN ('screening and testing', 'testing only') AS "is_collecting_samples_onsite"
-      ,NULL::boolean AS "is_collecting_samples_for_others"
-      ,CASE
-        WHEN (
-          (TRIM("Services Offered") IN ('screening and testing', 'testing only') AND ((TRIM("Call first") = 'Yes') OR ((TRIM("Referral Required") = 'Yes'))))
-          AND (TRIM("Appointment Only") = 'Yes')
-          ) THEN TRUE
-        ELSE FALSE
-      END AS "is_collecting_samples_by_appointment_only"
-      ,NULL::boolean AS "is_processing_samples"
-      ,NULL::boolean AS "is_processing_samples_onsite"
-      ,NULL::boolean AS "is_processing_samples_for_others"
-      ,COALESCE(description."value", TRIM("Instructions", '')) AS "location_specific_testing_criteria"
-      ,COALESCE(TRIM("Comments", '')) AS "additional_information_for_patients"
+      ,"managing_organization_kind" AS "location_place_of_service_type"
+      ,"hours_of_operation" AS "location_hours_of_operation"
+      ,("is_screening_onsite" OR "is_virtual_screening_offered") AS "is_evaluating_symptoms"
+      
+      ,("is_screening_onsite" AND NOT("is_virtual_screening_offered") AND ("is_appt_only" OR "is_call_first")) AS "is_evaluating_symptoms_by_appointment_only"
+      
+      ,(NOT("is_collecting_onsite") AND ("is_screening_onsite" OR "is_virtual_screening_offered")) AS "is_ordering_tests"
+      
+      ,NULL::boolean AS "is_ordering_tests_only_for_those_who_meeting_criteria"
+      
+      ,"is_collecting_onsite" AS "is_collecting_samples"
+      ,"is_collecting_onsite" AS "is_collecting_samples_onsite"
+      
+      ,("is_collecting_onsite" AND NOT("is_screening_onsite" OR "is_virtual_screening_offered")) AS "is_collecting_samples_for_others"
+      
+      ,("is_collecting_onsite" AND ("is_appt_only" OR "is_call_first")) AS "is_collecting_samples_by_appointment_only"
+      
+      ,"test_processing" IN ('point-of-care','onsite lab','offsite lab','lab') AS "is_processing_samples"
+      
+      ,"test_processing" IN ('point-of-care','onsite lab') AS "is_processing_samples_onsite"
+      
+      ,(NOT("is_collecting_onsite" OR "is_screening_onsite" OR "is_virtual_screening_offered") AND ("test_processing" IN ('point-of-care','onsite lab','lab'))) AS "is_processing_samples_for_others"
+      
+      ,'' AS "location_specific_testing_criteria"
+      ,'' AS "additional_information_for_patients"
       ,'' AS "reference_publisher_of_criteria"
-      ,CONCAT('[GISCorps] ', TRIM("Data Source")) AS "data_source"
-      ,jsonb_build_object(
-        'OBJECTID', NULLIF(TRIM(giscorps."OBJECTID"), 'NULL')
-        ,'Facility ID', NULLIF(TRIM("Facility ID"), 'NULL')
-        ,'Name of Facility', NULLIF(TRIM("Name of Facility"), 'NULL')
-        ,'Full Address', NULLIF(TRIM("Full Address"), 'NULL')
-        ,'Municipality', NULLIF(TRIM("Municipality"), 'NULL')
-        ,'Owner Name', NULLIF(TRIM("Owner Name"), 'NULL')
-        ,'Owner Type', NULLIF(TRIM("Owner Type"), 'NULL')
-        ,'Phone', NULLIF(TRIM("Phone"), 'NULL')
-        ,'Website', NULLIF(TRIM("Website"), 'NULL')
-        ,'Operational Hours', NULLIF(TRIM("Operational Hours"), 'NULL')
-        ,'Contact Name', NULLIF(TRIM("Contact Name"), 'NULL')
-        ,'Contact Phone', NULLIF(TRIM("Contact Phone"), 'NULL')
-        ,'Contact Email', NULLIF(TRIM("Contact Email"), 'NULL')
-        ,'Comments', NULLIF(TRIM("Comments"), 'NULL')
-        ,'Instructions', NULLIF(TRIM("Instructions"), 'NULL')
-        ,'Vehicle Capacity', NULLIF(TRIM("Vehicle Capacity"), 'NULL')
-        ,'Daily Testing Capacity', NULLIF(TRIM("Daily Testing Capacity"), 'NULL')
-        ,'Status', NULLIF(TRIM("Status"), 'NULL')
-        ,'CreationDate', NULLIF(TRIM("CreationDate"), 'NULL')
-        ,'Creator', NULLIF(TRIM("Creator"), 'NULL')
-        ,'EditDate', NULLIF(TRIM("EditDate"), 'NULL')
-        ,'Editor', NULLIF(TRIM("Editor"), 'NULL')
-        ,'Vetted', NULLIF(TRIM("Vetted"), 'NULL')
-        ,'Drive-through', NULLIF(TRIM("Drive-through"), 'NULL')
-        ,'Appointment Only', NULLIF(TRIM("Appointment Only"), 'NULL')
-        ,'Referral Required', NULLIF(TRIM("Referral Required"), 'NULL')
-        ,'Services Offered', NULLIF(TRIM("Services Offered"), 'NULL')
-        ,'Call first', NULLIF(TRIM("Call first"), 'NULL')
-        ,'Virtual/Telehealth Screening', NULLIF(TRIM("Virtual/Telehealth Screening"), 'NULL')
-        ,'Local Health Department URL', NULLIF(TRIM("Local Health Department URL"), 'NULL')
-        ,'State or Territory', NULLIF(TRIM("State or Territory"), 'NULL')
-        ,'GlobalID', NULLIF(TRIM("GlobalID"), 'NULL')
-        ,'Data Source', NULLIF(TRIM("Data Source"), 'NULL')
-        ,'Test Type', NULLIF(TRIM("Test Type"), 'NULL')
-        ,'County', NULLIF(TRIM("County"), 'NULL')
-        ,'x', NULLIF(TRIM("x"), 'NULL')
-        ,'y', NULLIF(TRIM("y"), 'NULL')
-      ) AS "raw_data"
-      ,NULL AS "geojson"
-      ,COALESCE(NULLIF(TRIM("CreationDate"), '')::TIMESTAMP, NOW()) AS "created_on"
-      ,COALESCE(NOW()) AS "updated_on"
-      ,CASE WHEN "Status" = 'Closed' THEN "EditDate"::TIMESTAMP ELSE NULL END AS "deleted_on"
-      ,"Status" AS "location_status"
+      ,CONCAT('[GISCorps] ', TRIM("data_source")) AS "data_source"
+      ,"raw_data" AS "raw_data"
+      ,NULL::jsonb AS "geojson"
+      ,"CreationDate" AS "created_on"
+      ,"EditDate" AS "updated_on"
+      ,CASE WHEN "status" = 'Closed' THEN "EditDate" ELSE NULL END AS "deleted_on"
+      ,"status" AS "location_status"
       ,jsonb_strip_nulls(jsonb_build_array(
-        CASE WHEN NULLIF(TRIM(giscorps."OBJECTID"), '') IS NOT NULL THEN jsonb_build_object(
+        CASE WHEN NULLIF(TRIM("OBJECTID"), '') IS NOT NULL THEN jsonb_build_object(
           'use','primary'
           ,'kind','esriFieldTypeOID'
           ,'system','Esri'
           ,'field','OBJECTID'
           ,'alias','OBJECTID'
           ,'assigner','GISCorps'
-          ,'value',NULLIF(TRIM(giscorps."OBJECTID"), '')
-        ) ELSE NULL END
-        ,CASE WHEN NULLIF(TRIM("Facility ID"), '') IS NOT NULL THEN jsonb_build_object(
-          'use','other'
-          ,'kind','esriFieldTypeString'
-          ,'system','Esri'
-          ,'field','facilityid'
-          ,'alias', 'Facility ID'
-          ,'assigner','GISCorps'
-          ,'value',NULLIF(TRIM("Facility ID"), '')
-        ) ELSE NULL END
-        ,CASE WHEN NULLIF(TRIM("GlobalID"), '') IS NOT NULL THEN jsonb_build_object(
-          'use','other'
-          ,'kind','esriFieldTypeGlobalID'
-          ,'system','Esri'
-          ,'field','GlobalID'
-          ,'alias', 'GlobalID'
-          ,'assigner','Esri'
-          ,'value',NULLIF(TRIM("GlobalID"), '')
+          ,'value',NULLIF(TRIM("OBJECTID"), '')
         ) ELSE NULL END
       )) AS "external_location_id"
     FROM
-      "giscorps" AS "giscorps"
-      ,description
+      ingest_giscorps
     WHERE
-      ("x" <> '') 
-      AND ("y" <> '')
-      AND "Status" NOT IN ('Not Publicly Shared', 'Invalid', 'Missing Data', 'Pending Review', 'NULL', '') 
-      AND "Status" IS NOT NULL
-      AND giscorps."OBJECTID" = description."OBJECTID"
+      "status" NOT IN ('Not Publicly Shared', 'Invalid', 'Missing Data', 'Pending Review', 'NULL', '') 
+      AND "status" IS NOT NULL
     GROUP BY
-      giscorps."OBJECTID",
-      description.value,
-      "Facility ID", 
-      "Name of Facility", 
-      "Full Address", 
-      "Municipality", 
-      "Owner Name", 
-      "Owner Type", 
-      "Phone", 
-      "Website", 
-      "Operational Hours", 
-      "Contact Name", 
-      "Contact Phone", 
-      "Contact Email", 
-      "Comments", 
-      "Instructions", 
-      "Vehicle Capacity", 
-      "Daily Testing Capacity", 
-      "Status", 
-      "CreationDate", 
-      "Creator", 
-      "EditDate", 
-      "Editor", 
-      "Vetted", 
-      "Drive-through", 
-      "Appointment Only", 
-      "Referral Required", 
-      "Services Offered", 
-      "Call first", 
-      "Virtual/Telehealth Screening", 
-      "Local Health Department URL", 
-      "State or Territory", 
-      "GlobalID", 
-      "Data Source", 
-      "Test Type", 
-      "County", 
-      "x", 
-      "y" 
-    
+      "OBJECTID",
+      -- "facilityid",
+      -- "GlobalID",
+      "location_id",
+      "name",
+      "address",
+      "phone",
+      "period_start",
+      "period_end",
+      "hours_of_operation",
+      "managing_organization",
+      "managing_organization_kind",
+      "managing_organization_url",
+      "health_dept_url",  
+      "status",
+      "services_offered_onsite",
+      "test_kind",
+      "test_processing",
+      "is_flagged",
+      "is_appt_only",
+      "is_call_first",
+      "is_referral_required",
+      "is_screening_onsite",
+      "is_collecting_onsite",
+      "is_virtual_screening_offered",
+      "is_virtual_screening_required",
+      "is_drive_through",
+      "data_source",
+      "EditDate",
+      "CreationDate",
+      "testcapacity",
+      "numvehicles",
+      "municipality",
+      "county",
+      "state",
+      "lat",
+      "long"
   )a
 )
 
@@ -408,7 +366,7 @@ upd_1 AS (
 SELECT
   *
 FROM
-  giscorps
+  upd
 LIMIT 10
 
 
