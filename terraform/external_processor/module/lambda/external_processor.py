@@ -10,7 +10,7 @@ SECRETS_ARN - arn of the secrets manager secret per env with DB credentials
 """
 
 region = getenv("AWS_REGION", 'us-east-1')
-environment = getenv("ENVIRONMENT", "dev")
+environment = getenv("ENVIRONMENT", "staging")
 account_id = boto3.client('sts').get_caller_identity().get('Account')
 app_name = "external"
 database_name = 'covid'
@@ -69,7 +69,7 @@ def lambda_handler(event, context):
   )
 
   # create index
-  execute_statement("CREATE UNIQUE INDEX data_ingest_pkey ON data_ingest(record_id int4_ops);")
+  execute_statement("CREATE UNIQUE INDEX IF NOT EXISTS data_ingest_pkey ON data_ingest(record_id int4_ops);")
 
   # Download json
   with open(temp_json_file, 'r') as file:
@@ -93,9 +93,6 @@ def lambda_handler(event, context):
     Bucket=bucket_name,
     Key=f"{s3_file_name}"
   )
-
-  # close connection
-  db_conn.close()
 
   logger.debug("finished")
 
