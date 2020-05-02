@@ -1,26 +1,27 @@
 import json
 import boto3
-import requests
 from os import getenv
-import psycopg2
 import re
 import logging
 
-app_name = "external"
-
 """
 Expected params in SSM
-CONNECTION_STRING - psycopg connection string
-"host='localhost' dbname='my_database' user='postgres' password='secret'"
+SECRETS_ARN - arn of the secrets manager secret per env with DB credentials
 """
 
+region = getenv("AWS_REGION", 'us-east-1')
+environment = getenv("ENVIRONMENT", "dev")
+account_id = boto3.client('sts').get_caller_identity().get('Account')
+app_name = "external"
+database_name = 'covid'
 
 # Utils
-s3 = boto3.client('s3', region_name=getenv("AWS_REGION", 'us-east-1'))
-ssm_client = boto3.client('ssm', region_name=getenv("AWS_REGION", 'us-east-1'))
+s3 = boto3.client('s3', region_name=region)
+rds_client = boto3.client('rds-data', region_name=region)
+ssm_client = boto3.client('ssm', region_name=region)
 logger=logging.getLogger()
 
-if "staging" in getenv("ENVIRONMENT"):
+if "staging" in environment:
   logger.setLevel(logging.DEBUG)
 else:
   logger.setLevel(logging.INFO)
@@ -28,18 +29,22 @@ else:
 def get_param(param_name, app_name=app_name, decrypt=True):
   try:
     response = ssm_client.get_parameter(
-      Name=f'/{getenv("ENVIRONMENT", "dev")}/{app_name}/{param_name}',
+      Name=f'/{environment}/{app_name}/{param_name}',
       WithDecryption=decrypt
     )
     return response.get("Parameter").get("Value")
   except ssm_client.exceptions.ParameterNotFound:
     return ""
 
-def make_connection():
-    conn_str=get_param("CONNECTION_STRING")
-    conn = psycopg2.connect(conn_str)
-    conn.autocommit=True
-    return conn 
+def execute_statement(sql, sql_parameters=[]):
+  response = rds_client.execute_statement(
+      secretArn=get_param("SECRETS_ARN"),
+      database=database_name,
+      resourceArn=f'arn:aws:rds:{region}:{account_id}:cluster:cac-{environment}',
+      sql=sql,
+      parameters=sql_parameters
+  )
+  return response
 
 def lambda_handler(event, context):
 
@@ -54,14 +59,8 @@ def lambda_handler(event, context):
 
   logger.debug(f"Prefix is {prefix}")
 
-  # make db connection
-  db_conn = make_connection()
-  db_client = db_conn.cursor()
-
-  logger.debug("DB connection initiated")
-
   # create the table if not exists
-  db_client.execute("""CREATE TABLE IF NOT EXISTS data_ingest (
+  execute_statement("""CREATE TABLE IF NOT EXISTS data_ingest (
     record_id SERIAL PRIMARY KEY,
     data jsonb,
     data_source text,
@@ -70,7 +69,7 @@ def lambda_handler(event, context):
   )
 
   # create index
-  db_client.execute("CREATE UNIQUE INDEX data_ingest_pkey ON data_ingest(record_id int4_ops);")
+  execute_statement("CREATE UNIQUE INDEX data_ingest_pkey ON data_ingest(record_id int4_ops);")
 
   # Download json
   with open(temp_json_file, 'r') as file:
@@ -78,7 +77,7 @@ def lambda_handler(event, context):
     json_file = json.loads(file)
     for item in json_file.get("features"):
       logger.debug(item)
-      cur.execute('INSERT INTO %s (data, data_source) VALUES (%s, %s)', ("data_ingest", item, f's3://{bucket_name}/{s3_file_name}'))
+      execute_statement('INSERT INTO %s (data, data_source) VALUES (%s, %s)', ("data_ingest", item, f's3://{bucket_name}/{s3_file_name}'))
 
   logger.debug("Done inserting into db")
   logger.debug("archiving file")

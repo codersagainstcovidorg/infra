@@ -44,8 +44,14 @@ resource "aws_lambda_function" "func" {
   role          = aws_iam_role.lambda.arn
   handler       = "external_processor.lambda_handler"
   source_code_hash = filebase64sha256("${path.module}/lambda/external_processor.py")
-  runtime       = "python3.8"
+  runtime       = "python3.7"
   timeout       = 120
+
+  vpc_config {
+    subnet_ids = data.aws_subnet_ids.private_subnets.ids
+    #TODO: add sec group, add s3 endpoint, look at nat gateway vs rds endpoint
+    security_group_ids = ""
+  }
 
   environment {
     variables = {
