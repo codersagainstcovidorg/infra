@@ -320,7 +320,7 @@ WITH upd AS (
     ,"additional_information_for_patients"
     ,"reference_publisher_of_criteria"
     ,"data_source"
-    ,("raw_data" || jsonb_build_object('period_start', "period_start", 'period_end', "period_end")) AS "raw_data"
+    ,"raw_data"
     ,"geojson"
     ,"created_on"
     ,"updated_on"
