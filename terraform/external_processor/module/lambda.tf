@@ -49,8 +49,7 @@ resource "aws_lambda_function" "func" {
 
   vpc_config {
     subnet_ids = data.aws_subnet_ids.private_subnets.ids
-    #TODO: add sec group, add s3 endpoint, look at nat gateway vs rds endpoint
-    security_group_ids = ""
+    security_group_ids = var.security_group_ids
   }
 
   environment {

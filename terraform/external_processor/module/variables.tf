@@ -13,6 +13,10 @@ variable "environment" {
   description = "Environment to deploy into"
 }
 
+variable "security_group_ids" {
+  description = "SG id to allow endpoint access"
+}
+
 
 
 

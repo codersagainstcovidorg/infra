@@ -64,7 +64,7 @@ resource "aws_iam_policy" "lambda" {
       "Effect": "Allow",
       "Action": [
         "secretsmanager:GetSecretValue",
-        "secretsmanager:DescribeSecret",
+        "secretsmanager:DescribeSecret"
       ],
       "Resource": "arn:aws:secretsmanager:${var.region}:${data.aws_caller_identity.current.account_id}:secret:*${var.environment}*"
     },
@@ -79,7 +79,16 @@ resource "aws_iam_policy" "lambda" {
         "rds-data:RollbackTransaction"
       ],
       "Resource": "*"
-    }           
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateNetworkInterface",
+        "ec2:DescribeNetworkInterfaces",
+        "ec2:DeleteNetworkInterface"
+      ],
+      "Resource": "*"
+    }
   ]
 }
 EOF
