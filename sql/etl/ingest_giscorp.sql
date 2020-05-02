@@ -44,6 +44,56 @@ CREATE TEMP TABLE IF NOT EXISTS ingest_giscorps (
 
 TRUNCATE TABLE "ingest_giscorps" RESTART IDENTITY; -- Truncate existing table (if already existed)
 
+-- Table Definition ----------------------------------------------
+
+CREATE TABLE IF NOT EXISTS entities_proc (
+    record_id SERIAL PRIMARY KEY,
+    location_id text UNIQUE NOT NULL DEFAULT uuid_in(md5(random()::text || now()::text)::cstring),
+    is_hidden boolean NOT NULL DEFAULT true,
+    is_verified boolean NOT NULL DEFAULT false,
+    location_name text,
+    location_address_street character varying(255),
+    location_address_locality character varying(255),
+    location_address_region character varying(255),
+    location_address_postal_code character varying(255),
+    location_latitude double precision,
+    location_longitude double precision,
+    location_contact_phone_main character varying(255),
+    location_contact_phone_appointments character varying(255),
+    location_contact_phone_covid character varying(255),
+    location_contact_url_main text,
+    location_contact_url_covid_info text,
+    location_contact_url_covid_screening_tool text,
+    location_contact_url_covid_virtual_visit text,
+    location_contact_url_covid_appointments text,
+    location_place_of_service_type character varying(255),
+    location_hours_of_operation text,
+    is_evaluating_symptoms boolean,
+    is_evaluating_symptoms_by_appointment_only boolean,
+    is_ordering_tests boolean,
+    is_ordering_tests_only_for_those_who_meeting_criteria boolean,
+    is_collecting_samples boolean,
+    is_collecting_samples_onsite boolean,
+    is_collecting_samples_for_others boolean,
+    is_collecting_samples_by_appointment_only boolean,
+    is_processing_samples boolean,
+    is_processing_samples_onsite boolean,
+    is_processing_samples_for_others boolean,
+    location_specific_testing_criteria text,
+    additional_information_for_patients text,
+    reference_publisher_of_criteria text,
+    data_source text,
+    raw_data text,
+    geojson json,
+    created_on timestamp with time zone NOT NULL DEFAULT now(),
+    updated_on timestamp with time zone NOT NULL DEFAULT now(),
+    deleted_on timestamp with time zone,
+    location_status text DEFAULT 'Active'::text,
+    external_location_id text
+);
+
+TRUNCATE TABLE "entities_proc" RESTART IDENTITY; -- Truncate existing table (if already existed)
+
 ---- Extract and translate ----------------------------------------------
 WITH source AS (
   SELECT
@@ -113,8 +163,9 @@ SELECT
   COALESCE(TRIM("attr"#>>'{name}'), '') AS "name",
   COALESCE(TRIM("attr"#>>'{fulladdr}'), '') AS "address",
   COALESCE(TRIM("attr"#>>'{phone}'), '') AS "phone",
-  COALESCE(("attr"#>>'{start_date}')::DATE,to_timestamp(("attr"#>>'{CreationDate}')::double precision / 1000)::date) AS "period_start",
-  COALESCE(("attr"#>>'{end_date}')::DATE, '9999-12-31'::DATE) AS "period_end",
+  COALESCE(to_timestamp((("attr"#>>'{start_date}')::double precision) / 1000)::date,
+            to_timestamp((("attr"#>>'{CreationDate}')::double precision) / 1000)::date) AS "period_start",
+  COALESCE((to_timestamp((("attr"#>>'{end_date}')::double precision) / 1000)::date), '9999-12-31'::DATE) AS "period_end",
   COALESCE(TRIM("attr"#>>'{operhours}'), '') AS "hours_of_operation",
   COALESCE(TRIM("attr"#>>'{agency}'), '') AS "managing_organization",
   COALESCE(TRIM("attr"#>>'{agencytype}'), '') AS "managing_organization_kind",
@@ -122,7 +173,7 @@ SELECT
   COALESCE(TRIM("attr"#>>'{health_dept_url}'), '') AS "health_dept_url",
   COALESCE(TRIM("attr"#>>'{status}'), '') AS "status",
   COALESCE(TRIM("attr"#>>'{services_offered_onsite}'), '') AS "services_offered_onsite",
-  COALESCE(TRIM("attr"#>>'{test_type}'),TRIM("attr"#>>'{type_of_test}'), '') AS "test_kind",
+  COALESCE(NULLIF(TRIM("attr"#>>'{type_of_test}'), ''),NULLIF(TRIM("attr"#>>'{test_type}'), ''), '') AS "test_kind",
   COALESCE(TRIM("attr"#>>'{test_processing}'), '') AS "test_processing",
   COALESCE(TRIM("attr"#>>'{red_flag}'), '') = 'Yes' AS "is_flagged",
   
@@ -186,9 +237,9 @@ SELECT
   
   TRIM("attr"#>>'{Instructions}') AS "instructions",
   
-  TRIM("attr"#>>'{comments}')AS "comments",
+  TRIM("attr"#>>'{comments}') AS "comments",
   
-  "raw_data"
+  jsonb_strip_nulls("attr" - '{OBJECTID,facilityid,GlobalID,name,fulladdr,operhours,phone,agency,agencytype,agencyurl,health_dept_url,status,EditDate,CreationDate,appt_only,call_first,referral_required,data_source,municipality,State}'::text[])
 FROM
   source
 ;
@@ -227,9 +278,8 @@ UPDATE ingest_giscorps SET
         'This location was operating normally as of our last check-in. '
     END
     ,CONCAT('(Last verified: ', "EditDate"::DATE,')')
-  ),
-  "comments" = 'As details are changing frequently, please verify this information by contacting the testing center. If you are experiencing extreme or dangerous symptoms (including trouble breathing), seek medical attention immediately.'
-  
+  )
+  ,"comments" = 'As details are changing frequently, please verify this information by contacting the testing center. If you are experiencing extreme or dangerous symptoms (including trouble breathing), seek medical attention immediately.'
 ;
         
 TRUNCATE TABLE "entities_proc" RESTART IDENTITY; -- First, remove all existing values
@@ -270,7 +320,7 @@ WITH upd AS (
     ,"additional_information_for_patients"
     ,"reference_publisher_of_criteria"
     ,"data_source"
-    ,"raw_data"
+    ,("raw_data" || jsonb_build_object('period_start', "period_start", 'period_end', "period_end")) AS "raw_data"
     ,"geojson"
     ,"created_on"
     ,"updated_on"
@@ -301,7 +351,7 @@ WITH upd AS (
       
       ,"name" AS "location_name"
       ,"address" AS "location_address_street"
-      ,COALESCE("county", "state", '') AS "location_address_locality"
+      ,COALESCE("municipality", '') AS "location_address_locality"
       ,COALESCE("state", '') AS "location_address_region"
       ,'' AS "location_address_postal_code"
       ,"lat" AS "location_latitude"
@@ -320,6 +370,8 @@ WITH upd AS (
       ,'' AS "location_contact_url_covid_appointments"
       ,"managing_organization_kind" AS "location_place_of_service_type"
       ,"hours_of_operation" AS "location_hours_of_operation"
+      ,"period_start" AS "period_start"
+      ,"period_end" AS "period_end"
       ,("is_screening_onsite" OR "is_virtual_screening_offered") AS "is_evaluating_symptoms"
       
       ,("is_screening_onsite" AND NOT("is_virtual_screening_offered") AND ("is_appt_only" OR "is_call_first")) AS "is_evaluating_symptoms_by_appointment_only"
@@ -345,7 +397,20 @@ WITH upd AS (
       ,"instructions" AS "additional_information_for_patients"
       ,"health_dept_url" AS "reference_publisher_of_criteria"
       ,CONCAT('[GISCorps] ', TRIM("data_source")) AS "data_source"
-      ,"raw_data" AS "raw_data"
+      ,(jsonb_build_object(
+          'is_drive_through', "is_drive_through"
+          ,'is_flagged', "is_flagged"
+          -- ,'test_kind', (COALESCE(LOWER(TRIM("test_kind")), ''))
+          ,'does_offer_antibody_test', (COALESCE(LOWER(TRIM("test_kind")), '') IN ('antibody', 'antibody-poc', 'both'))
+          ,'does_offer_molecular_test', (COALESCE(LOWER(TRIM("test_kind")), '') IN ('molecular', 'both'))
+          ,'is_same_day_result', (COALESCE(LOWER(TRIM("test_processing")), '') IN ('point-of-care'))
+          ,'is_scheduled_to_open', ("period_start"::DATE > CURRENT_DATE)
+          ,'is_scheduled_to_close', ("period_end"::text) NOT LIKE ('9999%')
+          ,'is_temporary', ((("period_end"::DATE - CURRENT_DATE) - ("period_start"::DATE - CURRENT_DATE)) = 0)
+          ,'days_remaining_until_open', GREATEST(("period_start"::DATE - CURRENT_DATE), 0)
+          ,'days_remaining_until_close', ("period_end"::DATE - CURRENT_DATE)
+        ) -- || "raw_data"::jsonb
+      ) AS "raw_data"
       ,NULL::jsonb AS "geojson"
       ,"CreationDate" AS "created_on"
       ,"EditDate" AS "updated_on"
@@ -446,6 +511,7 @@ INSERT INTO "entities_proc" AS entities (
   ,"created_on"
   ,"updated_on"
   ,"deleted_on"
+  ,"raw_data"
   ,"location_status"
 )
 SELECT DISTINCT
@@ -487,6 +553,7 @@ SELECT DISTINCT
   ,"created_on"
   ,"updated_on"
   ,"deleted_on"
+  ,"raw_data"
   ,"location_status"
 FROM 
   upd
@@ -529,8 +596,9 @@ GROUP BY
   ,"created_on"
   ,"updated_on"
   ,"deleted_on"
+  ,"raw_data"
   ,"location_status"
-ON CONFLICT ("location_latitude","location_longitude") DO NOTHING
+ON CONFLICT ("location_id") DO NOTHING
 -- ON CONFLICT ("location_id","location_latitude","location_longitude") DO UPDATE
 --   SET
 --     "location_id" = md5(CONCAT('DUPLICATE|',entities."location_latitude",'|',entities."location_longitude"))::uuid
@@ -593,3 +661,4 @@ SET "updated_on" = CURRENT_TIMESTAMP;
 ---- Clean up 
 DROP TABLE IF EXISTS ingest_giscorps;
 DROP TABLE IF EXISTS entities_proc;
+-- TRUNCATE TABLE "data_ingest" RESTART IDENTITY; -- Remove existing values
