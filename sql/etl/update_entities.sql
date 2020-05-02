@@ -90,9 +90,9 @@ UPDATE entities SET "reference_publisher_of_criteria" = '' WHERE "reference_publ
 
 UPDATE entities SET "data_source" = '' WHERE "data_source" IS NULL;
 
-UPDATE entities SET "raw_data" = '{}';
+UPDATE entities SET "raw_data" = NULL::json WHERE "raw_data" IS NULL;
 
-UPDATE entities SET "geojson" = '{}'::json WHERE "geojson" IS NULL;
+UPDATE entities SET "geojson" = NULL::json WHERE "geojson" IS NULL;
 
 UPDATE entities SET "location_status" = 'Invalid' WHERE "location_status" IS NULL;
 

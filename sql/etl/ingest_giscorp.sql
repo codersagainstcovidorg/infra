@@ -513,6 +513,7 @@ INSERT INTO "entities_proc" AS entities (
   ,"deleted_on"
   ,"raw_data"
   ,"location_status"
+  ,"external_location_id"
 )
 SELECT DISTINCT
   "location_id"
@@ -555,6 +556,7 @@ SELECT DISTINCT
   ,"deleted_on"
   ,"raw_data"
   ,"location_status"
+  ,"external_location_id"
 FROM 
   upd
 GROUP BY
@@ -598,6 +600,7 @@ GROUP BY
   ,"deleted_on"
   ,"raw_data"
   ,"location_status"
+  ,"external_location_id"
 ON CONFLICT ("location_id") DO NOTHING
 -- ON CONFLICT ("location_id","location_latitude","location_longitude") DO UPDATE
 --   SET
