@@ -30,7 +30,6 @@ def get_param(param_name, app_name=app_name, decrypt=True):
     return ""
 
 def execute_statement(sql, params=[]):
-  print(sql)
   response = rds_client.execute_statement(
       secretArn=get_param("SECRETS_ARN"),
       database=database_name,
@@ -41,8 +40,6 @@ def execute_statement(sql, params=[]):
   return response
 
 def lambda_handler(event, context):
-  print(event)
-
   print("starting")
 
   # Get bucket and object name from event
@@ -51,6 +48,7 @@ def lambda_handler(event, context):
   bucket_name =  event.get("Records")[0]["s3"]["bucket"]["name"]
   s3_file_name = event.get("Records")[0]["s3"]["object"]["key"]
   prefix = re.match(r".*?/", s3_file_name).group(0)
+  file_path = f's3://{bucket_name}/{s3_file_name}'
   print("creating table")
   # create the table if not exists
   execute_statement("""CREATE TABLE IF NOT EXISTS data_ingest (
@@ -72,12 +70,13 @@ def lambda_handler(event, context):
   with open(temp_json_file, 'r') as file:
     json_file = json.load(file)
     for item in json_file.get("features"):
-      print("inserting into db")
+      print(f"inserting into db")
       data = {'name':'data', 'value':{'stringValue': json.dumps(item)}}
-      data_source = {'name':'data_source', 'value':{'stringValue': f's3://{bucket_name}/{s3_file_name}'}}
+      data_source = {'name':'data_source', 'value':{'stringValue': file_path}}
       execute_statement("INSERT INTO data_ingest(data, data_source) VALUES(:data::jsonb, :data_source)", [data, data_source])
 
   # archive the file
+  print("archiving file")
   s3.copy_object(
     ACL='private',
     Bucket=bucket_name,
@@ -89,6 +88,8 @@ def lambda_handler(event, context):
     Bucket=bucket_name,
     Key=f"{s3_file_name}"
   )
+
+  print(f"done with {file_path}")
 
 if getenv("AWS_EXECUTION_ENV") is None:
   print("running locally")
