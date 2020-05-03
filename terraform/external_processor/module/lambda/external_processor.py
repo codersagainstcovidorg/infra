@@ -67,13 +67,12 @@ def lambda_handler(event, context):
   with open(temp_json_file, 'wb') as file:
     s3.download_fileobj(bucket_name, s3_file_name, file)
 
+  
   with open(temp_json_file, 'r') as file:
     json_file = json.load(file)
     print("started db insert")
     for item in json_file.get("features"):
-      data = {'name':'data', 'value':{'stringValue': json.dumps(item)}}
-      data_source = {'name':'data_source', 'value':{'stringValue': file_path}}
-      execute_statement("INSERT INTO data_ingest(data, data_source) VALUES(:data::jsonb, :data_source)", [data, data_source])
+      execute_statement("INSERT INTO data_ingest(data, data_source) VALUES(:data::jsonb, :data_source)", [{'name':'data', 'value':{'stringValue': json.dumps(item)}}, {'name':'data_source', 'value':{'stringValue': file_path}}])
 
   # archive the file
   print("archiving file")

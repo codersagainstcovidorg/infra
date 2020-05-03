@@ -46,6 +46,7 @@ resource "aws_lambda_function" "func" {
   source_code_hash = filebase64sha256("${path.module}/lambda/external_processor.py")
   runtime       = "python3.7"
   timeout       = var.timeout
+  memory_size = 512
 
   # vpc_config {
   #   subnet_ids = data.aws_subnet_ids.private_subnets.ids
