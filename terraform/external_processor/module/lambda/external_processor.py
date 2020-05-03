@@ -69,8 +69,8 @@ def lambda_handler(event, context):
 
   with open(temp_json_file, 'r') as file:
     json_file = json.load(file)
+    print("started db insert")
     for item in json_file.get("features"):
-      print(f"inserting into db")
       data = {'name':'data', 'value':{'stringValue': json.dumps(item)}}
       data_source = {'name':'data_source', 'value':{'stringValue': file_path}}
       execute_statement("INSERT INTO data_ingest(data, data_source) VALUES(:data::jsonb, :data_source)", [data, data_source])
