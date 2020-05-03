@@ -17,6 +17,12 @@ variable "security_group_ids" {
   description = "SG id to allow endpoint access"
 }
 
+variable "timeout" {
+  description = "lambda timeout"
+  type = number
+}
+
+
 
 
 
