@@ -47,10 +47,10 @@ resource "aws_lambda_function" "func" {
   runtime       = "python3.7"
   timeout       = 30
 
-  vpc_config {
-    subnet_ids = data.aws_subnet_ids.private_subnets.ids
-    security_group_ids = var.security_group_ids
-  }
+  # vpc_config {
+  #   subnet_ids = data.aws_subnet_ids.private_subnets.ids
+  #   security_group_ids = var.security_group_ids
+  # }
 
   environment {
     variables = {
