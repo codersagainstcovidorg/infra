@@ -96,7 +96,7 @@ UPDATE entities SET "geojson" = NULL::json WHERE "geojson" IS NULL;
 
 UPDATE entities SET "location_status" = 'Invalid' WHERE "location_status" IS NULL;
 
-UPDATE entities SET "external_location_id" = '' WHERE "external_location_id" IS NULL;
+UPDATE entities SET "external_location_id" = '' ;-- WHERE "external_location_id" IS NULL;
 
 
 
